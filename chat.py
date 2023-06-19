@@ -5,6 +5,10 @@ import yaml
 from time import time, sleep
 from uuid import uuid4
 
+# logging changes
+import logging
+logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
+
 
 def save_yaml(filepath, data):
     with open(filepath, 'w', encoding='utf-8') as file:
@@ -28,26 +32,26 @@ def chatbot(messages, model="gpt-4", temperature=0):
         try:
             response = openai.ChatCompletion.create(model=model, messages=messages, temperature=temperature)
             text = response['choices'][0]['message']['content']
-            
+
             ###    trim message object
             debug_object = [i['content'] for i in messages]
             debug_object.append(text)
             save_yaml('api_logs/convo_%s.yaml' % time(), debug_object)
             if response['usage']['total_tokens'] >= 7000:
                 a = messages.pop(1)
-            
+
             return text
         except Exception as oops:
-            print(f'\n\nError communicating with OpenAI: "{oops}"')
+            logging.error(f'Error communicating with OpenAI: "{oops}"')
             if 'maximum context length' in str(oops):
                 a = messages.pop(1)
-                print('\n\n DEBUG: Trimming oldest message')
+                logging.debug('Trimming oldest message')
                 continue
             retry += 1
             if retry >= max_retry:
-                print(f"\n\nExiting due to excessive errors in API: {oops}")
+                logging.error(f"Exiting due to excessive errors in API: {oops}")
                 exit(1)
-            print(f'\n\nRetrying in {2 ** (retry - 1) * 5} seconds...')
+            logging.info(f'Retrying in {2 ** (retry - 1) * 5} seconds...')
             sleep(2 ** (retry - 1) * 5)
 
 
